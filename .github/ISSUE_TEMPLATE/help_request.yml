@@ -1,0 +1,24 @@
+name: 🙋 Help / Question
+description: Ask for support with usage
+labels: [question]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: What do you need help with?
+      placeholder: I'm trying to configure...
+      description: Be as detailed as possible to get help effectively.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried-solutions
+    attributes:
+      label: Solutions you have tried
+      placeholder: I have tried restarting, updating dependencies, etc.
+
+  - type: textarea
+    id: additional-details
+    attributes:
+      label: Relevant code, screenshots or configuration
+      placeholder: Paste any relevant code, screenshots or configuration here.

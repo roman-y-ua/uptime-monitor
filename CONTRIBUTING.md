@@ -88,6 +88,8 @@ Here is a detailed breakdown on how to setup the project locally:
     git push origin "<your_branch_name>"
     ```
 
+If you make changes to the action logic, you can test them by running the local version using uses: "./" in a workflow within the same repository. See an example [here](https://github.com/cd-roman/uptime-monitor/blob/main/.github/workflows/smoke-test.yml) Otherwise, skip this step.
+
 ## 4. Create a Pull Request
 
 Title: Include the issue number (e.g., Fix typo in README (#123)).

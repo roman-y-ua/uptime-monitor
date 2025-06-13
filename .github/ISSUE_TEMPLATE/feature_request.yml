@@ -1,0 +1,30 @@
+name: 💡 Feature Request
+description: Suggest an idea
+labels: [feature]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: What's the feature?
+      placeholder: I would like to see...
+      description: Clearly describe the new capability or idea.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why is this needed?
+      placeholder: It would help because...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked the existing issues and discussions
+          required: true
+        - label: I am willing to work on this issue (Optional)
+          required: false

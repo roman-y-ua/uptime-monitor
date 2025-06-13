@@ -1,0 +1,73 @@
+name: 🐛 Bug Report
+description: Report something that isn't working or working incorrectly
+labels: [bug]
+body:
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: What exactly happened?
+      description: Describe the problem in detail.
+      placeholder: I encountered an error when...
+    validations:
+      required: true
+
+  - type: input
+    id: machine-type
+    attributes:
+      label: Machine type / runner
+      description: Specify the runner or machine type (e.g., ubuntu-latest, macOS, Windows).
+      placeholder: e.g. ubuntu-latest
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to Reproduce
+      description: Provide the steps to reproduce this issue.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Action version
+      placeholder: e.g. v1.0.0, latest
+    validations:
+      required: true
+
+  - type: textarea
+    id: example-workflow
+    attributes:
+      label: Example workflow file (YAML)
+      description: Paste the relevant part of your workflow file, if applicable.
+      placeholder: |
+        ```yaml
+        # your workflow here
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried-solutions
+    attributes:
+      label: Solutions tried
+      description: List any solutions or troubleshooting steps you have already tried.
+      placeholder: I have tried restarting the workflow, updating dependencies, etc.
+
+  - type: input
+    id: logs
+    attributes:
+      label: Relevant log snippet (optional)
+      placeholder: Paste error message or log if available.
+
+  - type: input
+    id: repository
+    attributes:
+      label: Repository
+      description: Link to the repository where the issue occurs (if public).
+      placeholder: https://github.com/your/repo
