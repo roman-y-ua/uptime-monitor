@@ -1,0 +1,56 @@
+name: "Website Uptime Monitor"
+description: "Monitor websites uptime, log results, and create issues for failures"
+author: "cd-roman"
+
+branding:
+  icon: "activity"
+  color: "green"
+
+inputs:
+  sites:
+    description: |
+      Newline-separated list of URLs to monitor.
+      Example:
+      https://example.com
+      https://api.example.com/health
+    required: true
+
+  timezone:
+    description: "IANA timezone for timestamps (e.g., 'America/New_York', 'Europe/Paris')"
+    default: "UTC"
+
+  log-file:
+    description: "Path to log file (relative to repository root)"
+    default: "uptime-monitor-results.log"
+
+  commit-message:
+    description: "Commit message for log file updates"
+    default: "🔍 Uptime monitoring results"
+
+  timeout:
+    description: "Request timeout in seconds"
+    default: "15"
+
+  success-codes:
+    description: "Comma-separated list of HTTP status codes considered successful"
+    default: "200,201,202,204"
+
+  max-concurrent:
+    description: "Maximum number of concurrent requests"
+    default: "5"
+
+  create-issue:
+    description: "Create GitHub issue on failures"
+    default: "true"
+
+outputs:
+  failed-sites:
+    description: "Number of sites that failed"
+  total-sites:
+    description: "Total number of sites checked"
+  log-file-path:
+    description: "Path to the generated log file"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"
