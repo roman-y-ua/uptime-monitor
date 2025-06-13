@@ -1,0 +1,60 @@
+name: "🛠️ Improvements & Maintenance"
+description: "Propose enhancements to the existing codebase, including documentation improvements, refactoring, or other maintenance tasks."
+labels: [improvement, maintenance]
+body:
+  - type: dropdown
+    id: improvement-type
+    attributes:
+      label: Type of improvement
+      description: What area does your suggestion relate to?
+      options:
+        - Documentation
+        - Code quality/refactoring
+        - Dependency update
+        - Workflow optimization
+        - Maintenance
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary of the improvement
+      description: Briefly describe the improvement you are suggesting.
+      placeholder: I suggest improving...
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why is this improvement needed?
+      description: Explain the motivation behind this suggestion.
+      placeholder: This would help because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-changes
+    attributes:
+      label: Proposed changes or steps
+      description: List the changes or steps you propose.
+      placeholder: 1. Update documentation... 2. Refactor code...
+
+  - type: textarea
+    id: additional-details
+    attributes:
+      label: Additional details and screenshots
+      description: Add any other context, code snippets, or screenshots.
+      placeholder: Paste relevant code, links, or images here.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked for similar improvement suggestions
+          required: true
+        - label: I am willing to help implement this improvement (optional)
+          required: false
