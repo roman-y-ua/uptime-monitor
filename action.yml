@@ -2,10 +2,6 @@ name: "Website Uptime Monitor"
 description: "Monitor websites uptime, log results, and create issues for failures"
 author: "cd-roman"
 
-branding:
-  icon: "activity"
-  color: "green"
-
 inputs:
   sites:
     description: |
@@ -54,3 +50,7 @@ outputs:
 runs:
   using: "node20"
   main: "dist/index.js"
+
+branding:
+  icon: "external-link"
+  color: "green"
