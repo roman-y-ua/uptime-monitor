@@ -182,6 +182,14 @@ The action parses each code with parseInt; invalid entries are ignored.
 
 ---
 
+### Q: I’m not receiving email notifications when the action creates an issue.
+
+The action opens issues using the GITHUB_TOKEN, so they’re authored by the GitHub Actions bot and you won’t be notified unless you’re subscribed to issue events or participate in the thread.
+
+To receive emails for new issues, go to your repository, click Watch > Custom, select Issues, and then Apply. Once subscribed, you’ll get an email each time the action generates an issue.
+
+---
+
 ### Q: I see a 6-hour job timeout error.
 
 By default, GitHub cancels jobs after 6 hours. Use timeout-minutes: X in your workflow to shorten this and avoid runaway bills.
