@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improve code readability and maintainability across core modules
 - Update the action icon shown on GitHub Marketplace
 - Improve formatting in CHANGELOG.md
 

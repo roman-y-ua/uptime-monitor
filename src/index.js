@@ -5,12 +5,14 @@ import { exec } from '@actions/exec';
 import { checkSites } from "./checker.js";
 import { ensureLogFile, appendLogLines, getLastLines } from "./logger.js";
 import { getTimeInTimezoneWithOffset } from "./time.js";
+import { isValidUrl, formatLogLine } from "./utils.js";
 import { createIssue } from "./github.js";
 
 async function run() {
   try {
     const sitesInput = core.getInput("sites", { required: true });
     const timezone = core.getInput("timezone") || "UTC";
+
     const logFile = core.getInput("log-file") || "uptime-monitor-results.log";
     const commitMessage =
       core.getInput("commit-message") || "🔍 Websites uptime check";
@@ -26,31 +28,17 @@ async function run() {
     const shouldCreateIssue =
       core.getInput("create-issue").toLowerCase() !== "false";
 
-    function isValidUrl(string) {
-      try {
-        const url = new URL(string);
-        return url.protocol === "http:" || url.protocol === "https:";
-      } catch {
-        return false;
-      }
-    }
-
     const sites = sitesInput
       .split("\n")
       .map((s) => s.trim())
-      .filter((s) => s.length > 0)
-      .filter((s) => {
-        if (!isValidUrl(s)) {
-          core.warning(`Invalid URL skipped: ${s}`);
-          return false;
-        }
-        return true;
-      });
+      .filter((s) => s.length > 0 && isValidUrl(s));
 
     if (sites.length === 0) {
-      throw new Error(
+      core.setFailed(
         "No valid sites were provided. Please specify at least one valid HTTP/HTTPS URL."
       );
+
+      return;
     }
 
     await ensureLogFile(logFile);
@@ -72,19 +60,9 @@ async function run() {
       errorMessage,
       timestamp,
     } of results) {
-      if (errorMessage) {
-        logLines.push(
-          `[${timestamp}] ${url} → Status: ${status}, Response: ${responseTimeSec.toFixed(
-            3
-          )}s, Error: ${errorMessage}\n`
-        );
-      } else {
-        logLines.push(
-          `[${timestamp}] ${url} → Status: ${status}, Response: ${responseTimeSec.toFixed(
-            3
-          )}s\n`
-        );
-      }
+      logLines.push(
+        formatLogLine({ url, status, responseTimeSec, errorMessage, timestamp })
+      );
 
       if (!successCodes.includes(status)) {
         anyFailed = true;

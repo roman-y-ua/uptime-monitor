@@ -1,16 +1,32 @@
-import { writeFile, appendFile, readFile, mkdir, open } from "fs/promises";
-import { existsSync } from "fs";
+import {
+  appendFile,
+  readFile,
+  mkdir,
+  open,
+  access,
+  constants,
+} from "fs/promises";
 import path from "path";
 
-export async function ensureLogFile(logFile) {
-  const dir = path.dirname(logFile);
-  if (dir !== "." && !existsSync(dir)) {
-    await mkdir(dir, { recursive: true });
-  }
-  if (!existsSync(logFile)) {
-    // Use open with 'wx' to avoid overwriting if file is created between existsSync and writeFile
+export async function ensureLogFile(logFilePath) {
+  const dir = path.dirname(logFilePath);
+
+  // Ensure directory exists
+  if (dir !== ".") {
     try {
-      const fileHandle = await open(logFile, "wx");
+      await access(dir, constants.F_OK);
+    } catch {
+      await mkdir(dir, { recursive: true });
+    }
+  }
+
+  // Ensure file exists
+  try {
+    await access(logFilePath, constants.F_OK);
+  } catch {
+    // Use open with 'wx' to avoid race conditions
+    try {
+      const fileHandle = await open(logFilePath, "wx");
       await fileHandle.write("# Uptime Monitor Log\n\n");
       await fileHandle.close();
     } catch (err) {
@@ -20,16 +36,18 @@ export async function ensureLogFile(logFile) {
   }
 }
 
-export async function appendLogLines(logFile, lines) {
-  await appendFile(logFile, lines.join(""));
+export async function appendLogLines(logFilePath, lines) {
+  await appendFile(logFilePath, lines.join(""));
 }
 
-export async function getLastLines(logFile, lineCount) {
-  const data = await readFile(logFile, "utf8");
+export async function getLastLines(logFilePath, lineCount) {
+  const data = await readFile(logFilePath, "utf8");
   const lines = data
     .trim()
     .split("\n")
     .map((line) => line.trim());
+
   if (lines.length <= lineCount) return lines;
+
   return lines.slice(lines.length - lineCount);
 }
