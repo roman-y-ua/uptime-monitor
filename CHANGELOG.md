@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased](https://github.com/cd-roman/uptime-monitor/compare/v1.0.2...HEAD)
 
+- Fix path to GETTING_STARTED.md for the README.md
+
 ## [v1.0.2](https://github.com/cd-roman/uptime-monitor/compare/v1.0.1...v1.0.2) - 2025-06-17
 
 ### Removed
