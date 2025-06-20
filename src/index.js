@@ -110,35 +110,39 @@ ${(await getLastLines(logFile, 20)).join("\n")}
 
     core.info(`Staging & committing ${logFile}`);
 
-    // Check if log file is git-ignored before proceeding
     const ignored = await isGitIgnored(logFile);
     if (ignored) {
-      core.info(`${logFile} is git-ignored. Skipping commit and push.`);
-    } else {
-      await exec("git", ["config", "user.name", "github-actions"]);
-      await exec("git", [
-        "config",
-        "user.email",
-        "github-actions@users.noreply.github.com",
-      ]);
-      await exec("git", ["add", logFile]);
+      core.setFailed(
+        `${logFile} is git-ignored. The workflow cannot proceed because the log file will not be committed. 
+        Please update your .gitignore and then rerun the workflow.`
+      );
 
-      let gitStatus = "";
-      await exec("git", ["status", "--porcelain"], {
-        listeners: {
-          stdout: (data) => {
-            gitStatus += data.toString();
-          },
+      return;
+    }
+
+    await exec("git", ["config", "user.name", "github-actions"]);
+    await exec("git", [
+      "config",
+      "user.email",
+      "github-actions@users.noreply.github.com",
+    ]);
+    await exec("git", ["add", logFile]);
+
+    let gitStatus = "";
+    await exec("git", ["status", "--porcelain"], {
+      listeners: {
+        stdout: (data) => {
+          gitStatus += data.toString();
         },
-      });
+      },
+    });
 
-      if (gitStatus.trim().length > 0) {
-        await exec("git", ["commit", "-m", commitMessage]);
-        await exec("git", ["push"]);
-        core.info("Log file committed and pushed.");
-      } else {
-        core.info("No changes to commit.");
-      }
+    if (gitStatus.trim().length > 0) {
+      await exec("git", ["commit", "-m", commitMessage]);
+      await exec("git", ["push"]);
+      core.info("Log file committed and pushed.");
+    } else {
+      core.info("No changes to commit.");
     }
 
     const failedCount = results.filter(
