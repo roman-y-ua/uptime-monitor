@@ -37,7 +37,7 @@ Just continue with your chosen repository.
 
 ## Step 3: Add the Workflow Configuration
 
-Copy and paste the following example into your `uptime-monitor.yml` file:
+Copy and paste the following example into your `uptime-monitor.yml` file. You can tweak the schedule, inputs, and any other configuration options later to suit your needs:
 
 ```yaml
 name: Website Uptime Monitor
@@ -125,12 +125,34 @@ You can adjust the action’s settings using the `with:` block. Here’s what ea
 
 ---
 
-## Step 5: Commit and Push
+## Step 5: Make sure your log file isn’t ignored
+
+Your `.gitignore` may include a rule like `*.log`, which will block the action workflow from creating commits with the updated log file. Here’s how to handle it in different scenarios:
+
+**Scenario 1. No `*.log` entry**
+   If you don’t have `*.log` in your `.gitignore`, you’re all set. Continue to the next step.
+
+**Scenario 2. You’re ignoring all `.log` files but don’t need that rule**  
+   In this case, remove the `*.log` line from your `.gitignore` (only if it won’t affect other parts of your project).
+
+**Scenario 3. You want to ignore other logs but keep the uptime log**  
+   Keep `*.log` in your `.gitignore`, but add an exception for the log file, created by the uptime monitor:
+   ```gitignore
+   *.log
+   !uptime-monitor-results.log
+   ```
+  This allows the action to commit its results file while still ignoring all the other `.log` files.
+
+  Please note that the default log file is `uptime-monitor-results.log`. If you change it with a custom path in your configuration file, you need to add it to the `.gitignore` file in Scenario 3 as well.
+
+---
+
+## Step 6: Commit and Push
 
 1. Save your changes.
-2. Commit the new workflow file:
+2. Commit the new workflow file (and changes in .gitignore):
    ```sh
-   git add .github/workflows/uptime-monitor.yml
+   git add .
    git commit -m "Add Website Uptime Monitor workflow"
    git push
    ```
@@ -138,10 +160,11 @@ You can adjust the action’s settings using the `with:` block. Here’s what ea
 
 ---
 
-## Step 6: Check the Results
+## Step 7: Check the Results
 
 - The action will log results to the file you specified (default: `uptime-monitor-results.log` in the root of your project).
 - If a site is down, and `create-issue` is `true`, a GitHub issue will be created automatically.
+- **Note:** Each workflow run creates a new commit for the log file. During active development, pull frequently by using `git pull` to stay in sync, or consider running this action in a separate repository to keep extra commits out of your main project.
 
 ---
 
