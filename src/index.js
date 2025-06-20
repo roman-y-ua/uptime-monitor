@@ -5,7 +5,7 @@ import { exec } from '@actions/exec';
 import { checkSites } from "./checker.js";
 import { ensureLogFile, appendLogLines, getLastLines } from "./logger.js";
 import { getTimeInTimezoneWithOffset } from "./time.js";
-import { isValidUrl, formatLogLine } from "./utils.js";
+import { isValidUrl, formatLogLine, isGitIgnored } from "./utils.js";
 import { createIssue } from "./github.js";
 
 async function run() {
@@ -109,29 +109,36 @@ ${(await getLastLines(logFile, 20)).join("\n")}
     }
 
     core.info(`Staging & committing ${logFile}`);
-    await exec("git", ["config", "user.name", "github-actions"]);
-    await exec("git", [
-      "config",
-      "user.email",
-      "github-actions@users.noreply.github.com",
-    ]);
-    await exec("git", ["add", logFile]);
 
-    let gitStatus = "";
-    await exec("git", ["status", "--porcelain"], {
-      listeners: {
-        stdout: (data) => {
-          gitStatus += data.toString();
-        },
-      },
-    });
-
-    if (gitStatus.trim().length > 0) {
-      await exec("git", ["commit", "-m", commitMessage]);
-      await exec("git", ["push"]);
-      core.info("Log file committed and pushed.");
+    // Check if log file is git-ignored before proceeding
+    const ignored = await isGitIgnored(logFile);
+    if (ignored) {
+      core.info(`${logFile} is git-ignored. Skipping commit and push.`);
     } else {
-      core.info("No changes to commit.");
+      await exec("git", ["config", "user.name", "github-actions"]);
+      await exec("git", [
+        "config",
+        "user.email",
+        "github-actions@users.noreply.github.com",
+      ]);
+      await exec("git", ["add", logFile]);
+
+      let gitStatus = "";
+      await exec("git", ["status", "--porcelain"], {
+        listeners: {
+          stdout: (data) => {
+            gitStatus += data.toString();
+          },
+        },
+      });
+
+      if (gitStatus.trim().length > 0) {
+        await exec("git", ["commit", "-m", commitMessage]);
+        await exec("git", ["push"]);
+        core.info("Log file committed and pushed.");
+      } else {
+        core.info("No changes to commit.");
+      }
     }
 
     const failedCount = results.filter(
