@@ -13,7 +13,7 @@ A GitHub Action that monitors websites' uptime, logs results, and creates issues
 
 ## Getting Started
 
-If you’re new to GitHub Actions or prefer a detailed, step-by-step guide, check out [GETTING_STARTED](.docs/GETTING_STARTED.md) guide. Otherwise, continue here for a quick setup.
+If you’re new to GitHub Actions or prefer a detailed, step-by-step guide, check out [GETTING_STARTED](docs/GETTING_STARTED.md) guide. Otherwise, continue here for a quick setup.
 
 ## Usage
 
@@ -179,6 +179,14 @@ You can adjust timeout (e.g. 5 seconds) or disable issue creation for noisy endp
 Provide a comma-separated list without spaces, e.g. "200,204,301".
 
 The action parses each code with parseInt; invalid entries are ignored.
+
+---
+
+### Q: I’m not receiving email notifications when the action creates an issue.
+
+The action opens issues using the GITHUB_TOKEN, so they’re authored by the GitHub Actions bot and you won’t be notified unless you’re subscribed to issue events or participate in the thread.
+
+To receive emails for new issues, go to your repository, click Watch > Custom, select Issues, and then Apply. Once subscribed, you’ll get an email each time the action generates an issue.
 
 ---
 

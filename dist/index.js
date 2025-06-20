@@ -31867,34 +31867,55 @@ var github = __nccwpck_require__(3228);
 // EXTERNAL MODULE: ./node_modules/@actions/exec/lib/exec.js
 var exec = __nccwpck_require__(5236);
 ;// CONCATENATED MODULE: ./src/time.js
-function getTimeInTimezoneWithOffset(tz) {
-  if (tz.toUpperCase() === "UTC") {
-    const d = new Date();
-    return d.toISOString().split(".")[0] + "+00:00";
+const DATE_PART_TYPES = [
+  "year",
+  "month",
+  "day",
+  "hour",
+  "minute",
+  "second",
+  "timeZoneName",
+];
+
+/**
+ * Returns the current date-time string in the specified IANA timezone,
+ * formatted as ISO 8601 with offset (e.g., "2025-06-16T12:34:56+02:00").
+ * Falls back to UTC if the timezone is invalid or unsupported.
+ * @param {string} timezone - IANA timezone string (e.g., "Europe/Paris")
+ * @returns {string} ISO 8601 date-time string with offset
+ */
+function getTimeInTimezoneWithOffset(timezone) {
+  if (timezone.toUpperCase() === "UTC") {
+    const date = new Date();
+    return date.toISOString().split(".")[0] + "+00:00";
   }
 
+  // Try Temporal API if available
   if (typeof globalThis.Temporal?.Now === "function") {
     try {
-      const zdt = globalThis.Temporal.Now.zonedDateTimeISO(tz);
-      return zdt
+      const zonedDateTime = globalThis.Temporal.Now.zonedDateTimeISO(timezone);
+      return zonedDateTime
         .toString()
         .replace(/\.\d+/, "")
         .replace(/\u2212/g, "-")
         .split("[")[0];
     } catch {
-      // Invalid IANA tz → fall back to Intl below
+      // Invalid IANA timezone, fall back to Intl below
     }
   }
 
+  // Try Intl.DateTimeFormat to validate timezone
   try {
-    Intl.DateTimeFormat(undefined, { timeZone: tz }).format(new Date());
+    Intl.DateTimeFormat(undefined, { timeZone: timezone }).format(new Date());
   } catch {
-    const d = new Date();
-    return d.toISOString().split(".")[0] + "+00:00";
+    // Invalid timezone, fall back to UTC
+    const date = new Date();
+    return date.toISOString().split(".")[0] + "+00:00";
   }
 
+  // Format using Intl.DateTimeFormat with offset
   const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: tz,
+    timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -31906,87 +31927,92 @@ function getTimeInTimezoneWithOffset(tz) {
     timeZoneName: "longOffset",
   }).formatToParts(new Date());
 
-  const values = {};
+  const dateParts = {};
   for (const part of parts) {
-    if (
-      [
-        "year",
-        "month",
-        "day",
-        "hour",
-        "minute",
-        "second",
-        "timeZoneName",
-      ].includes(part.type)
-    ) {
-      values[part.type] = part.value;
+    if (DATE_PART_TYPES.includes(part.type)) {
+      dateParts[part.type] = part.value;
     }
   }
 
-  const dateTime = `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}`;
-  const offset = values.timeZoneName.replace("GMT", "").replace(/\u2212/g, "-");
+  const dateTime = `${dateParts.year}-${dateParts.month}-${dateParts.day}T${dateParts.hour}:${dateParts.minute}:${dateParts.second}`;
+  const offset = dateParts.timeZoneName
+    .replace("GMT", "")
+    .replace(/\u2212/g, "-");
+
   return dateTime + offset;
 }
 
 ;// CONCATENATED MODULE: ./src/checker.js
 
 
-async function checkSites(sites, { timeoutMs, maxConcurrent, timezone }) {
-  async function checkSingle(url) {
-    const timestamp = getTimeInTimezoneWithOffset(timezone);
-    const start = Date.now();
-    let status = 0;
-    let responseTimeSec = 0.0;
-    let errorMessage = null;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+async function checkSingleSite(url, { timeoutMs, timezone }) {
+  const timestamp = getTimeInTimezoneWithOffset(timezone);
+  const start = Date.now();
 
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "GitHub-Actions-Uptime-Monitor/1.0",
-        },
-      });
-      status = res.status;
-      responseTimeSec = (Date.now() - start) / 1000;
-    } catch (error) {
-      status = 0;
-      responseTimeSec = (Date.now() - start) / 1000;
-      errorMessage = error.name === "AbortError" ? "Timeout" : error.message;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+  let status = 0;
+  let responseTimeSec = 0.0;
+  let errorMessage = null;
 
-    return { url, status, responseTimeSec, errorMessage, timestamp };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "GitHub-Actions-Uptime-Monitor/1.0",
+      },
+    });
+    status = res.status;
+    responseTimeSec = (Date.now() - start) / 1000;
+  } catch (error) {
+    status = 0;
+    responseTimeSec = (Date.now() - start) / 1000;
+    errorMessage = error.name === "AbortError" ? "Timeout" : error.message;
+  } finally {
+    clearTimeout(timeoutId);
   }
 
+  return { url, status, responseTimeSec, errorMessage, timestamp };
+}
+
+function createErrorResult(url, timezone, reason) {
+  return {
+    url,
+    status: 0,
+    responseTimeSec: 0,
+    errorMessage: reason?.message || "Unknown error",
+    timestamp: getTimeInTimezoneWithOffset(timezone),
+  };
+}
+
+async function checkSites(
+  sites,
+  { timeoutMs = 15000, maxConcurrent = 5, timezone = "UTC" } = {}
+) {
   const results = [];
+
   for (let i = 0; i < sites.length; i += maxConcurrent) {
     const batch = sites.slice(i, i + maxConcurrent);
     const batchResults = await Promise.allSettled(
-      batch.map((url) => checkSingle(url))
+      batch.map((url) => checkSingleSite(url, { timeoutMs, timezone }))
     );
-    for (const r of batchResults) {
-      results.push(
-        r.value || {
-          url: null,
-          status: 0,
-          responseTimeSec: 0,
-          errorMessage: r.reason?.message || "Unknown error",
-          timestamp: getTimeInTimezoneWithOffset(timezone),
-        }
-      );
-    }
+
+    batchResults.forEach((result, j) => {
+      if (result.status === "fulfilled") {
+        results.push(result.value);
+      } else {
+        results.push(createErrorResult(batch[j], timezone, result.reason));
+      }
+    });
   }
+
   return results;
 }
 
 ;// CONCATENATED MODULE: external "fs/promises"
 const promises_namespaceObject = require("fs/promises");
-// EXTERNAL MODULE: external "fs"
-var external_fs_ = __nccwpck_require__(9896);
 // EXTERNAL MODULE: external "path"
 var external_path_ = __nccwpck_require__(6928);
 var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
@@ -31994,16 +32020,25 @@ var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
 
 
 
+async function ensureLogFile(logFilePath) {
+  const dir = external_path_default().dirname(logFilePath);
 
-async function ensureLogFile(logFile) {
-  const dir = external_path_default().dirname(logFile);
-  if (dir !== "." && !(0,external_fs_.existsSync)(dir)) {
-    await (0,promises_namespaceObject.mkdir)(dir, { recursive: true });
-  }
-  if (!(0,external_fs_.existsSync)(logFile)) {
-    // Use open with 'wx' to avoid overwriting if file is created between existsSync and writeFile
+  // Ensure directory exists
+  if (dir !== ".") {
     try {
-      const fileHandle = await (0,promises_namespaceObject.open)(logFile, "wx");
+      await (0,promises_namespaceObject.access)(dir, promises_namespaceObject.constants.F_OK);
+    } catch {
+      await (0,promises_namespaceObject.mkdir)(dir, { recursive: true });
+    }
+  }
+
+  // Ensure file exists
+  try {
+    await (0,promises_namespaceObject.access)(logFilePath, promises_namespaceObject.constants.F_OK);
+  } catch {
+    // Use open with 'wx' to avoid race conditions
+    try {
+      const fileHandle = await (0,promises_namespaceObject.open)(logFilePath, "wx");
       await fileHandle.write("# Uptime Monitor Log\n\n");
       await fileHandle.close();
     } catch (err) {
@@ -32013,20 +32048,42 @@ async function ensureLogFile(logFile) {
   }
 }
 
-async function appendLogLines(logFile, lines) {
-  await (0,promises_namespaceObject.appendFile)(logFile, lines.join(""));
+async function appendLogLines(logFilePath, lines) {
+  await (0,promises_namespaceObject.appendFile)(logFilePath, lines.join(""));
 }
 
-async function getLastLines(logFile, lineCount) {
-  const data = await (0,promises_namespaceObject.readFile)(logFile, "utf8");
+async function getLastLines(logFilePath, lineCount) {
+  const data = await (0,promises_namespaceObject.readFile)(logFilePath, "utf8");
   const lines = data
     .trim()
     .split("\n")
     .map((line) => line.trim());
+
   if (lines.length <= lineCount) return lines;
+
   return lines.slice(lines.length - lineCount);
 }
 
+;// CONCATENATED MODULE: ./src/utils.js
+function isValidUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function formatLogLine({
+  timestamp,
+  url,
+  status,
+  responseTimeSec,
+  errorMessage,
+}) {
+  const base = `[${timestamp}] ${url} → Status: ${status}, Response: ${responseTimeSec.toFixed(3)}s`;
+  return errorMessage ? `${base}, Error: ${errorMessage}\n` : `${base}\n`;
+}
 ;// CONCATENATED MODULE: ./src/github.js
 async function createIssue(octokit, owner, repo, title, body) {
   await octokit.rest.issues.create({
@@ -32047,10 +32104,12 @@ async function createIssue(octokit, owner, repo, title, body) {
 
 
 
+
 async function run() {
   try {
     const sitesInput = core.getInput("sites", { required: true });
     const timezone = core.getInput("timezone") || "UTC";
+
     const logFile = core.getInput("log-file") || "uptime-monitor-results.log";
     const commitMessage =
       core.getInput("commit-message") || "🔍 Websites uptime check";
@@ -32066,31 +32125,17 @@ async function run() {
     const shouldCreateIssue =
       core.getInput("create-issue").toLowerCase() !== "false";
 
-    function isValidUrl(string) {
-      try {
-        const url = new URL(string);
-        return url.protocol === "http:" || url.protocol === "https:";
-      } catch {
-        return false;
-      }
-    }
-
     const sites = sitesInput
       .split("\n")
       .map((s) => s.trim())
-      .filter((s) => s.length > 0)
-      .filter((s) => {
-        if (!isValidUrl(s)) {
-          core.warning(`Invalid URL skipped: ${s}`);
-          return false;
-        }
-        return true;
-      });
+      .filter((s) => s.length > 0 && isValidUrl(s));
 
     if (sites.length === 0) {
-      throw new Error(
+      core.setFailed(
         "No valid sites were provided. Please specify at least one valid HTTP/HTTPS URL."
       );
+
+      return;
     }
 
     await ensureLogFile(logFile);
@@ -32112,19 +32157,9 @@ async function run() {
       errorMessage,
       timestamp,
     } of results) {
-      if (errorMessage) {
-        logLines.push(
-          `[${timestamp}] ${url} → Status: ${status}, Response: ${responseTimeSec.toFixed(
-            3
-          )}s, Error: ${errorMessage}\n`
-        );
-      } else {
-        logLines.push(
-          `[${timestamp}] ${url} → Status: ${status}, Response: ${responseTimeSec.toFixed(
-            3
-          )}s\n`
-        );
-      }
+      logLines.push(
+        formatLogLine({ url, status, responseTimeSec, errorMessage, timestamp })
+      );
 
       if (!successCodes.includes(status)) {
         anyFailed = true;
